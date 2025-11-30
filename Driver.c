@@ -1,8 +1,9 @@
-﻿#include <ntddk.h>
+#include <ntddk.h>
 
 #define FILE_DEVICE_IBS      0x8001
 #define IOCTL_IBS_VALIDATE_USER_STACK \
     CTL_CODE(FILE_DEVICE_IBS, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
 
 typedef struct _IBS_VALIDATION_INPUT {
     PVOID UserRsp; // pointer to the top of the user stack(where the return address is located)
@@ -49,6 +50,30 @@ IbsCreateClose(
     return STATUS_SUCCESS;
 }
 
+
+PKTRAP_FRAME GetTrapFrameFromStack() {
+
+    PVOID StackBase = IoGetInitialStack();
+
+    ULONG_PTR Candidate = (ULONG_PTR)StackBase - sizeof(KTRAP_FRAME);
+
+    PKTRAP_FRAME TrapFrame = (PKTRAP_FRAME)Candidate;
+
+    if (TrapFrame->Rip < 0x7FFFFFFFFFFF && TrapFrame->Rsp < 0x7FFFFFFFFFFF && TrapFrame->Rsp > 0x1000) {
+        return TrapFrame;
+    }
+
+
+    Candidate -= 0x100;
+    TrapFrame = (PKTRAP_FRAME)Candidate;
+
+    if (TrapFrame->Rip < 0x7FFFFFFFFFFF && TrapFrame->Rsp < 0x7FFFFFFFFFFF) {
+        return TrapFrame;
+    }
+
+    return NULL;
+}
+
 NTSTATUS
 IbsDeviceControl(
     _In_ PDEVICE_OBJECT DeviceObject,
@@ -71,10 +96,6 @@ IbsDeviceControl(
         }
         else
         {
-            // The buffer is shared (METHOD_BUFFERED), so:
-            // 1) we copy the input to a local variable
-            // 2) then we use the buffer as output
-
             PIBS_VALIDATION_INPUT inBuf =
                 (PIBS_VALIDATION_INPUT)Irp->AssociatedIrp.SystemBuffer;
 
@@ -85,24 +106,41 @@ IbsDeviceControl(
 
             RtlZeroMemory(out, sizeof(*out));
 
+
+            PVOID targetRsp = inLocal.UserRsp;
+
+            PKTRAP_FRAME trapFrame = GetTrapFrameFromStack();
+
+            if (trapFrame != NULL) {
+                targetRsp = (PVOID)trapFrame->Rsp;
+                DbgPrint("[-] SECURE: TrapFrame found via Stack Heuristic. Real RSP: %p, RIP: %p\n",
+                    targetRsp, trapFrame->Rip);
+            }
+            else {
+                DbgPrint("[-] WARNING: TrapFrame heuristic failed. Using User Input.\n");
+            }
+           
+     
             out->ProbeOk = FALSE;
             out->Match = FALSE;
             out->Status = STATUS_UNSUCCESSFUL;
 
             __try {
-                // We use the local copy, which will NOT be overwritten
+              
                 ProbeForRead(
-                    inLocal.UserRsp,
+                    targetRsp,
                     sizeof(PVOID),
-                    sizeof(UCHAR)
+                    sizeof(UCHAR) // Alignment
                 );
 
-                PVOID value = *(PVOID*)(inLocal.UserRsp);
+          
+                PVOID value = *(PVOID*)(targetRsp);
 
                 out->ValueAtRsp = value;
                 out->ProbeOk = TRUE;
                 out->Status = STATUS_SUCCESS;
 
+        
                 if (value == inLocal.ExpectedReturn) {
                     out->Match = TRUE;
                     DbgPrint("[-] Match: [RSP] = %p, Expected = %p\n",
@@ -125,7 +163,7 @@ IbsDeviceControl(
                 info = sizeof(*out);
 
                 DbgPrint("[-] Exception reading user stack at %p, status 0x%08X\n",
-                    inLocal.UserRsp, status);
+                    targetRsp, status);
             }
         }
     }
@@ -135,6 +173,7 @@ IbsDeviceControl(
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
     return status;
 }
+
 
 
 NTSTATUS
@@ -151,6 +190,7 @@ DriverEntry(
     UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\DosDevices\\IbsStackGuard");
 
     DbgPrint("[-] DriverEntry\n");
+
 
     status = IoCreateDevice(
         DriverObject,
