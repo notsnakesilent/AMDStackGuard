@@ -47,14 +47,6 @@ This code is intended for educational and research purposes only. Its purpose is
 
 ## TODO
 
-- [x] Implement the controller skeleton and IOCTL communication.
-- [x] Implement `ProbeForRead` and `__try/__except` blocks for secure access to user memory.
-- [x] Create a user-mode POC to simulate stack spoofing (RSP manipulation).
-- [x] Verify detection logic with manual inputs.
-- [ ] **Trap frame integration:**
-- Investigate `PsGetThreadTrapFrame` or manual stack traversal from the kernel stack base to find `KTRAP_FRAME`.
-- Extract `UserRsp` and `UserRip` automatically when entering IOCTL/Syscall.
-    - Goal: Decouple detection logic from user-mode application inputs.
 - [ ] **MDL support:**
 - Transition from `ProbeForRead` to `IoAllocateMdl` / `MmProbeAndLockPages` for robust memory access during high IRQL scenarios (preparation for PMI drivers).
 - [ ] **MSR configuration:**
