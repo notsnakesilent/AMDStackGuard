@@ -4,6 +4,7 @@ This repository implements a **proof-of-concept (PoC) Windows kernel driver** de
 
 The project serves as a fundamental software layer for a broader research initiative on **hardware-assisted control flow integrity (CFI)**. The current implementation focuses on secure introspection of user memory pages and detection of simulated return address spoofing anomalies.
 
+> Tested on Windows 10 22H2 
 <img width="687" height="532" alt="image" src="https://github.com/user-attachments/assets/f7d83651-43d7-4539-b5b0-76650d1a487e" />
 
 ## Research Context
