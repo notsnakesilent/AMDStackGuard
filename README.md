@@ -1,6 +1,6 @@
 # AMDStackGuard
 
-This repository implements a **proof-of-concept (PoC) Windows kernel driver** designed to validate the integrity of user-mode call stacks from ring 0 on AMD64 processors.
+This repository implements a **proof-of-concept (PoC) Windows kernel initializer** as part of an ongoing research effort on hardware-assisted control flow integrity, designed to validate the integrity of user-mode call stacks from ring 0 on AMD64 processors.
 
 The project serves as a fundamental software layer for a broader research initiative on **hardware-assisted control flow integrity (CFI)**. The current implementation focuses on secure introspection of user memory pages and detection of simulated return address spoofing anomalies.
 
