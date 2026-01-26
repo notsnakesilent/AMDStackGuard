@@ -2,7 +2,7 @@
 
 This repository implements a **proof-of-concept (PoC) Windows kernel driver** as part of an ongoing research effort on hardware-assisted control flow integrity, designed to validate the integrity of user-mode call stacks from ring 0 on AMD64 processors.
 
-The project serves as a fundamental software layer for a broader research initiative on **hardware-assisted control flow integrity (CFI)**. The current implementation focuses on secure introspection of user memory pages and detection of simulated return address spoofing anomalies.
+The project serves as a fundamental software layer for a broader research initiative on **Execution-context consistency validation using hardware-derived signals**. The current implementation focuses on secure introspection of user memory pages and detection of simulated return address spoofing anomalies.
 
 > Tested on Windows 10 22H2 
 <img width="687" height="532" alt="image" src="https://github.com/user-attachments/assets/f7d83651-43d7-4539-b5b0-76650d1a487e" />
@@ -11,7 +11,7 @@ The project serves as a fundamental software layer for a broader research initia
 Modern adversarial techniques (such as stack spoofing) manipulate the `RSP` register to decouple the logical call stack from the actual execution flow, effectively blinding traditional security tools (EDR/Anti-Cheats) that rely on stack traversal.  
 
 ## Research question
-Can hardware-assisted execution data from kernel space be leveraged to reliably detect user-mode call stack tampering at runtime, without compiler instrumentation and with acceptable performance overhead on commercial AMD64 systems?
+Can discrepancies between architecturally visible call stack state and hardware-derived execution traces be used as a reliable indicator of user-mode stack manipulation at runtime?
 
 This research investigates whether execution signals provided by the CPU can be used as a reliable ground truth to validate the integrity of user-mode call stacks, addressing the limitations of existing software-only control flow integrity (CFI) mechanisms, which rely solely on memory-based stack traversal.
 
@@ -26,6 +26,18 @@ What is the practical performance overhead of such validation when implemented i
 ## Research Hypotheses
 
 Hardware-assisted execution sampling can provide a more reliable reference for validating call stack integrity than memory-only approaches, enabling the detection of certain stack manipulation attacks with few false positives and manageable runtime overhead.
+
+## Research Claim
+
+AMDStackGuard demonstrates that user-mode stack spoofing can be reliably detected from kernel mode by validating consistency between:
+
+1. Memory-resident call stack state (UserRsp)
+2. Hardware-derived execution flow indicators (IBS)
+
+Under the stated threat model, a mismatch between these two signals constitutes
+a strong indicator of stack manipulation that cannot be trivially falsified
+from user mode.
+
 
 ## Threat model
 
@@ -77,6 +89,24 @@ The following items are explicitly considered out of scope:
 
 * Mitigation of speculative execution vulnerabilities unrelated to call stack integrity.
 
+## Core Invariant
+
+This research is based on the following assumption:
+
+> Under normal execution, the return address stored at the user-mode stack pointer (RSP) must be consistent with the execution flow observed through hardware-assisted execution sampling.
+> While not all discrepancies necessarily imply malicious intent, persistent or structured divergence between memory-resident stack state and hardware-derived execution data constitutes a strong indicator of stack manipulation.
+
+Any persistent divergence between these two representations indicates intentional manipulation of the call stack.
+
+## Scope of the Current Prototype
+
+The current implementation serves as a proof-of-concept designed to validate the feasibility of the proposed approach. It intentionally limits:
+
+- Sampling frequency
+- Attack coverage
+- Performance evaluation depth
+
+These aspects are deferred to subsequent research phases.
 
 ## Technical Architecture
 
