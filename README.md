@@ -29,7 +29,7 @@ Hardware-assisted execution sampling can provide a more reliable reference for v
 
 ## Research Claim
 
-AMDStackGuard demonstrates that user-mode stack spoofing can be reliably detected from kernel mode by validating consistency between:
+AMDStackGuard proposes a hardware-assisted validation model and implements the foundational components required to experimentally evaluate whether user-mode stack spoofing can be detected through execution-context consistency checks such as
 
 1. Memory-resident call stack state (UserRsp)
 2. Hardware-derived execution flow indicators (IBS)
@@ -38,6 +38,13 @@ Under the stated threat model, a mismatch between these two signals constitutes
 a strong indicator of stack manipulation that cannot be trivially falsified
 from user mode.
 
+## Research Status
+
+The current prototype validates the memory-resident stack invariant ([RSP] == ExpectedReturn) from kernel mode.
+
+Integration of AMD Instruction-Based Sampling (IBS) for hardware-derived execution trace correlation is planned for the next research phase.
+
+This repository represents Phase 1 of the research roadmap.
 
 ## Threat model
 
